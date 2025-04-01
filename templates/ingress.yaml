@@ -1,0 +1,53 @@
+{{- if .Values.ingress.enabled -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "application.fullnameOverride" . }}
+  labels:
+    {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+{{- if .Values.ingress.additionalLabels }}
+{{ toYaml .Values.ingress.additionalLabels | indent 4 }}
+{{- end }}
+{{- if or .Values.additionalAnnotations .Values.ingress.annotations }}
+  annotations:
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .Values.ingress.annotations }}
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+{{- end }}
+{{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName | default (print (include "application.fullnameOverride" $) "-tls-provider-class") }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "application.fullnameOverride" $ }}
+                port:
+                  number: {{ .servicePortNumber }}
+          {{- end }}
+    {{- end }}
+  {{- end }}

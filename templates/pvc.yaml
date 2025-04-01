@@ -1,0 +1,36 @@
+{{- if .Values.persistence.enabled }}
+{{- range .Values.persistence.volumes }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "application.fullnameOverride" $ }}-{{ .name }}
+  labels:
+    {{- include "generic.labels" $ | nindent 4 }}
+{{- if $.Values.additionalLabels }}
+{{ toYaml $.Values.additionalLabels | indent 4 }}
+{{- end }}
+{{- if or $.Values.additionalAnnotations .annotations }}
+  annotations:
+{{- if $.Values.additionalAnnotations }}
+{{ toYaml $.Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .annotations }}
+{{ toYaml .annotations | indent 4 }}
+{{- end }}
+{{- end }}
+spec:
+  accessModes:
+    - {{ .accessModes | default "ReadWriteOnce" }}
+  {{- if .storageClassName }}
+  storageClassName: {{ .storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .storage }}
+  {{- if .volumeMode }}
+  volumeMode: {{ .volumeMode }}
+  {{- end }}
+  volumeName: {{ .volumeName }}
+{{- end }}
+{{- end }}

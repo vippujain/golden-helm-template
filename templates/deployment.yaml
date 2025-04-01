@@ -1,0 +1,241 @@
+{{- if .Values.deployment.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+  {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+  annotations:
+  {{- include "generic.annotations" . | nindent 4 }}
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .Values.deployment.annotations }}
+{{ toYaml .Values.deployment.annotations | indent 4 }}
+{{- end }}
+  name: {{ include "application.fullnameOverride" . }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+{{- include "generic.selectorLabels" . | nindent 6 }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ toYaml . }}
+  {{- end }}
+  template:
+    metadata:
+      {{- if or .Values.additionalAnnotations .Values.deployment.podAnnotations .Values.configMap.enabled }}
+      annotations:
+        {{- if .Values.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.deployment.podAnnotations }}
+        {{- toYaml .Values.deployment.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.additionalAnnotations }}
+        {{- toYaml .Values.additionalAnnotations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "generic.labels" . | nindent 8 }}
+        {{- include "generic.selectorLabels" . | nindent 8 }}
+{{- if .Values.deployment.podLabels }}
+{{ toYaml .Values.deployment.podLabels | indent 8 }}
+{{- end }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 8 }}
+{{- end }}
+    spec:
+      restartPolicy: {{ .Values.restartPolicy }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workloadIdentity.enable}}
+      serviceAccountName: {{ .Values.workloadIdentity.serviceAccountName }}
+      {{- end }}
+      {{- with .Values.deployment.podSecurityContext }}
+      securityContext: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "application.fullnameOverride" . }}
+          {{- with .Values.deployment.containerSecurityContext }}
+          securityContext: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.command }}
+          command: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.args }}
+          args: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+          {{- if .Values.configMap.enabled }}
+          - configMapRef:
+              name: {{ include "application.fullnameOverride" . }}
+          {{- end }}
+          {{- if .Values.secret.enabled }}
+          - secretRef:
+              name: {{ include "application.fullnameOverride" . }}
+          {{- end }}
+          {{- if and (.Values.secretProviderClass.enabled) (.Values.secretProviderClass.secrets) }}
+          - secretRef:
+              name: {{ include "application.fullnameOverride" . }}-secrets-provider-class
+          {{- end }}
+          {{- if or .Values.env.metadata .Values.env.variables }}
+          env:
+          {{- range .Values.env.metadata }}
+            - name: {{ .name }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ .value }}
+          {{- end }}
+          {{- range .Values.env.variables }}
+            - name: {{ .name }}
+              value: {{ .value }}
+          {{- end }}
+          {{- end }}
+          {{- if or .Values.persistence.enabled .Values.additionalVolumeMounts .Values.configMap.mountPath .Values.configMap.mountFiles .Values.secretProviderClass.enabled }}
+          volumeMounts:
+            {{- if .Values.secretProviderClass.enabled }}
+            - name: secrets-store-inline
+              mountPath: "/mnt/secret-store"
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            {{- range .Values.persistence.volumes }}
+            {{- if .subPaths }}
+            {{- $volumeName := .name }}
+            {{- range .subPaths }}
+            - name: {{ $volumeName }}
+              mountPath: {{ .mountPath }}
+              subPath: {{ .subPath }}
+            {{- end }}
+            {{- else }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.configMap.mountPath }}
+            - name: configmap
+              mountPath: {{ . }}
+              readOnly: true
+            {{- end }}
+            {{- range $file := .Values.configMap.mountFiles }}
+            - name: configmap
+              mountPath: {{ .mountPath }}
+              subPath: {{ .subPath }}
+              readOnly: true
+            {{- end }}
+          {{- with .Values.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end  }}
+          {{- end }}
+          {{- with .Values.ports }}
+          ports: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.deployment.affinity .Values.deployment.additionalPreferredPodAntiAffinity .Values.deployment.enableNodeSpreadPodAntiAffinity .Values.deployment.enableZoneSpreadPodAntiAffinity }}
+      affinity:
+      {{- if or .Values.deployment.additionalPreferredPodAntiAffinity .Values.deployment.enableNodeSpreadPodAntiAffinity .Values.deployment.enableZoneSpreadPodAntiAffinity }}
+      {{- if .Values.deployment.enableSpotAffinity }}
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                - key: "kubernetes.azure.com/scalesetpriority"
+                  operator: In
+                  values:
+                  - "spot"
+      {{- end }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+      {{- if .Values.deployment.enableNodeSpreadPodAntiAffinity }}
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "generic.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- if .Values.deployment.enableZoneSpreadPodAntiAffinity }}
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "generic.selectorLabels" . | nindent 20 }}
+                topologyKey: topology.kubernetes.io/zone
+      {{- end }}
+      {{- with .Values.deployment.additionalPreferredPodAntiAffinity }}
+      {{- toYaml . | nindent 12 }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.deployment.affinity }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      tolerations:
+      {{- if .Values.deployment.enableSpotTolerations }}
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
+      {{- end }}
+      {{- with .Values.deployment.tolerations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.persistence.enabled .Values.additionalVolumes .Values.configMap.mountPath .Values.configMap.mountFile .Values.secretProviderClass.enabled }}
+      volumes:
+        {{- if .Values.secretProviderClass.enabled }}
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "application.fullnameOverride" . }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        {{- range .Values.persistence.volumes }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ include "application.fullnameOverride" $ }}-{{ .name }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if or .Values.configMap.mountPath .Values.configMap.mountFiles }}
+        - name: configmap
+          configMap:
+            name: {{ include "application.fullnameOverride" . }}
+        {{- end }}
+      {{- end }}
+{{- end }}

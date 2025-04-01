@@ -1,0 +1,41 @@
+{{- if .Values.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "application.fullnameOverride" . }}
+  labels:
+    {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+{{- if or .Values.additionalAnnotations .Values.service.annotations }}
+  annotations:
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .Values.service.annotations }}
+{{ toYaml .Values.service.annotations | indent 4 }}
+{{- end }}
+{{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- range .Values.service.ports }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol }}
+      name: {{ .name }}
+  {{- end }}
+  selector:
+{{- include "generic.selectorLabels" . | nindent 4 }}
+{{- if .Values.deployment.podLabels }}
+{{ toYaml .Values.deployment.podLabels | indent 4 }}
+{{- end }}
+  {{- if and (eq .Values.service.type "ClusterIP") (.Values.service.ip) }}
+  clusterIP: {{ .Values.service.ip }}
+  {{- end }}
+  {{- with .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+{{- end }}

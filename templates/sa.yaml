@@ -1,0 +1,21 @@
+{{- if .Values.serviceAccount.create -}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "generic.serviceAccountName" . }}
+  labels:
+    {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+{{- if or .Values.additionalAnnotations .Values.serviceAccount.annotations }}
+  annotations:
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .Values.serviceAccount.annotations }}
+{{ toYaml .Values.serviceAccount.annotations | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

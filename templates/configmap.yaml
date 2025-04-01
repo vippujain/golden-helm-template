@@ -1,0 +1,26 @@
+{{- if .Values.configMap.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "application.fullnameOverride" . }}
+  labels:
+    {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+  annotations:
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+{{- if .Values.initJob.enabled }}
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-weight": "1"
+    "helm.sh/resource-policy": keep
+{{- end }}
+data:
+{{- range $key, $value := .Values.configMap.data }}
+  {{ $key }}: {{ $value | quote}}
+{{- end }}
+{{- end }}

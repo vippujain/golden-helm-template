@@ -1,0 +1,305 @@
+---
+image:
+  repository: mcr.microsoft.com/azuredocs/aks-helloworld
+  pullPolicy: IfNotPresent
+  tag: "v1"
+
+restartPolicy: Always
+
+deploymentStrategy: {}
+
+# -- The number of old ReplicaSets to retain
+revisionHistoryLimit: 10
+
+# -- Pass in containers to run ahead of any new pod starting up
+initContainers: []
+
+# -- Job (one-off container) to run ahead of helm install / upgrade
+initJob:
+  enabled: false
+  env:
+    metadata: []
+    variables: []
+  image:
+    repository: busybox
+    pullPolicy: IfNotPresent
+    tag: "stable"
+  podAnnotations: {}
+  resources: {}
+
+imagePullSecrets: []
+
+fullnameOverride: "application"
+
+# -- number of replicas
+replicaCount: 1
+
+# -- Global annotations
+additionalAnnotations: {}
+  # key: value
+
+# -- Global labels
+additionalLabels: {}
+  # key: value
+
+command: ~
+
+args: ~
+
+additionalVolumeMounts: []
+
+additionalVolumes: []
+
+# -- Configure a startup probe for the pod
+startupProbe: {}
+
+# -- Configure a liveness probe for the pod
+livenessProbe: {}
+
+# -- Configure a readiness probe for the pod
+readinessProbe: {}
+
+resources: {}
+
+nodeSelector: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: ~
+  maxReplicas: ~
+  targetCPUUtilizationPercentage: ~
+  targetMemoryUtilizationPercentage: ~
+  behavior: {}
+    # scaleDown:
+    #   policies:
+    #   - periodSeconds: 15
+    #     type: Pods
+    #     value: 1
+    #   selectPolicy: Min
+    #   stabilizationWindowSeconds: 300
+    # scaleUp:
+    #   policies:
+    #   - periodSeconds: 15
+    #     type: Pods
+    #     value: 1
+    #   selectPolicy: Max
+    #   stabilizationWindowSeconds: 300
+
+configMap:
+  # -- If a ConfigMap with configurable values should be created
+  enabled: false
+
+  # -- The data for the ConfigMap. Both keys and values need to be strings.
+  data: {}
+    # key1: value
+    # key2, value
+
+  # -- If specified, the ConfigMap is mounted as a directory at this path
+  mountPath: ""
+
+  # -- Mounting of individual keys in the ConfigMap as files
+  mountFiles: []
+    # - subPath: "config.yml"
+    #   mountPath: /app/config.yml
+
+deployment:
+  enabled: true
+
+  # -- annotations to set for the Deployment
+  annotations: {}
+    # key: value
+
+  # -- annotations to set for the Pods
+  podAnnotations: {}
+    # key: value
+
+  # -- labels to add to the Pods
+  podLabels: {}
+    # key: value
+
+  podSecurityContext: {}
+    # key: value
+
+  containerSecurityContext: {}
+    # key: value
+
+  # -- Enable Spot Node Pool tolerations. In case you have Spot Node Pools deployed on your cluster, you must enable this in case you want your pods to be scheduled to those nodes.
+  enableSpotTolerations: false
+
+  # -- Enable Spot Node Pool affinity. In case you have Spot Node Pools deployed on your cluster, you might want to enable this in case you desire to restrict where you want your pods to be scheduled.
+  enableSpotAffinity: false
+
+  # -- Tolerations to apply to deployments
+  tolerations: []
+
+  # -- Additional affinity terms. **Do not** specify PodAntiAffinities with preferredDuringSchedulingIgnoredDuringExecution here, these go to `additionalPreferredPodAntiAffinity`. All `requiredDuringScheduling` affinities need to be defined here.
+  affinity: {}
+
+  # -- Enable an AntiAffinity between pods, spreading them across nodes if possible with a priority of 100.
+  enableNodeSpreadPodAntiAffinity: true
+
+  # -- Enable an AntiAffinity between pods, spreading them across zones if possible with a priority of 50.
+  enableZoneSpreadPodAntiAffinity: false
+
+  # -- Additional preferredDuringSchedulingIgnoredDuringExecution podAntiAffinity terms
+  additionalPreferredPodAntiAffinity: {}
+
+# -- To expose pod information in deployment ( reference - https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/ ).
+env:
+  metadata: []
+  variables: []
+
+ingress:
+  ## -- Enable or disable this Ingress
+  enabled: false
+
+  # -- The ingressClassName for this Ingress resource
+  className: ~
+
+  # -- Additional annotations for the ingress resource
+  annotations: {}
+    # key: value
+
+  # -- Additional labels for the ingress resource
+  additionalLabels: {}
+    # key: value
+
+  hosts:
+      # -- host name to listen to
+    - host: chart-example.local
+      paths:
+          # -- URL path
+        - path: /
+          # -- Name of the target port on the service
+          servicePortNumber: 80
+          # -- Type of path for the ingress
+          pathType: Prefix
+  tls: []
+
+networkpolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: {}
+  egress: {}
+
+persistence:
+  enabled: false
+  volumes:
+    - name: test-pvc
+      # -- Point to the backing Persistent Volume
+      volumeName: test-pv
+
+      # -- Access Mode for the PVC which must match the PV
+      accessModes: ReadWriteMany
+
+      # -- Annotations to add to the PersistentVolumeClaim
+      annotations: {}
+        # key: value
+
+      # -- Where the persistent volume is mounted.
+      mountPath: /data
+
+      # -- Specify if mounting specific paths from volume, takes precedence over mountPath if non-empty
+      subPaths: {}
+        # - mountPath: /data/first
+        #   subPath: first
+        # - mountPath: /data/second
+        #   subPath: second
+
+      # -- Storage capacity, needs to match the PV capacity.
+      storage: 42Gi
+
+      # -- Set a storageClassName, needs to match the PV storageClassName.
+      storageClassName: azureblob-fuse-standard
+
+      # -- Set the volume mode, needs to match the PV volumeMode.
+      volumeMode: Filesystem
+
+podDisruptionBudget:
+  # -- Deploy a PodDisruptionBudget
+  enabled: false
+
+  # -- How many pods need to be available, minimum
+  minAvailable: 25%
+
+  # -- How many pods can be unvailable, maximum
+  maxUnavailable: 75%
+
+ports:
+  - name: http
+    containerPort: 80
+    protocol: TCP
+
+secret:
+  # -- If a Secret with configurable values should be created
+  enabled: false
+
+  # -- The data for the ConfigMap. Both keys and values need to be strings.
+  data: {}
+    # key1: value
+    # key2, value
+
+secretProviderClass:
+  enabled: false
+
+  # -- If secrets should be reloaded on change
+  reloader: false
+
+  provider: "azure"
+
+  # -- vaultAddress: <keyvault_name>
+  vaultAddress: ""
+
+  # -- Client ID of project user managed identity
+  clientID: ""
+
+  # -- Azure tenant id
+  tenant_id: ""
+
+  # -- The data for the SecretProviderClass. Both keys and values need to be strings.
+  secrets: {}
+  tls:
+    name: ~
+    version: ~
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: false
+
+  # -- Annotations to add to the service account
+  annotations: {}
+    # key: value
+
+  # -- The name of the service account to use. If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+service:
+  enabled: true
+  type: ClusterIP
+
+  annotations: {}
+    # key: value
+
+  # -- List of ports. If you override it, you will have to explicitly add the default again.
+  ports:
+      # -- Target port on the pod.
+    - targetPort: http
+      # -- Protocol to use for the target port.
+      protocol: TCP
+      # -- Name of the port on the service.
+      name: http
+      # -- Port to use on the service.
+      port: 80
+
+  # Only for type ClusterIP
+  ip: ~
+
+  ## -- Only for type LoadBalancer
+  loadBalancerIP: ~
+
+workloadIdentity:
+  enable: false
+
+  serviceAccountName: ""

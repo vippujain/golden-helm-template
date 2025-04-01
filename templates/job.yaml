@@ -1,0 +1,101 @@
+{{- if and .Values.initJob.enabled (or (gt (.Values.replicaCount | int) 0) (.Values.autoscaling.enabled)) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "application.fullnameOverride" . }}-init-job
+  labels:
+    {{- include "generic.labels" . | nindent 4 }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels | indent 4 }}
+{{- end }}
+  annotations:
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations | indent 4 }}
+{{- end }}
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation, hook-succeeded
+    "helm.sh/hook-weight": "4"
+spec:
+  template:
+    metadata:
+      {{- if or .Values.additionalAnnotations .Values.initJob.podAnnotations .Values.configMap.enabled }}
+      annotations:
+        {{- if .Values.configMap.enabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.initJob.podAnnotations }}
+        {{- toYaml .Values.initJob.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.additionalAnnotations }}
+        {{- toYaml .Values.additionalAnnotations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "generic.labels" . | nindent 8 }}
+        {{- include "generic.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workloadIdentity.enable}}
+      serviceAccountName: {{ .Values.workloadIdentity.serviceAccountName }}
+      {{- end }}
+      containers:
+        - name: {{ include "application.fullnameOverride" . }}-init-job
+          image: "{{ .Values.initJob.image.repository }}:{{ .Values.initJob.image.tag }}"
+          imagePullPolicy: {{ .Values.initJob.image.pullPolicy }}
+          {{- if or .Values.initJob.env.metadata .Values.initJob.env.variables }}
+          env:
+          {{- range .Values.initJob.env.metadata }}
+            - name: {{ .name }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ .value }}
+          {{- end }}
+          {{- range .Values.initJob.env.variables }}
+            - name: {{ .name }}
+              value: {{ .value }}
+          {{- end }}
+          {{- end }}
+          envFrom:
+          {{- if .Values.configMap.enabled }}
+          - configMapRef:
+              name: {{ include "application.fullnameOverride" . }}
+          {{- end }}
+          {{- if .Values.secret.enabled }}
+          - secretRef:
+              name: {{ include "application.fullnameOverride" . }}
+          {{- end }}
+          {{- if .Values.secretProviderClass.enabled }}
+          - secretRef:
+              name: {{ include "application.fullnameOverride" . }}-secrets-provider-class
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secret-store"
+              readOnly: true
+          {{- end }}
+          {{- with .Values.initJob.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+      tolerations:
+      {{- if .Values.deployment.enableSpotTolerations }}
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
+      {{- end }}
+      {{- with .Values.deployment.tolerations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.secretProviderClass.enabled }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "application.fullnameOverride" . }}
+      {{- end }}
+{{- end }}
