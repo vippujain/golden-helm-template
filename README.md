@@ -55,21 +55,6 @@ A gold chart templateA golden helm chart template
 | ingress.tls | list | `[]` |  |
 | initContainers | list | `[]` | Pass in containers to run ahead of any new pod starting up |
 | initJob | object | `{"enabled":false,"env":{"metadata":[],"variables":[]},"image":{"pullPolicy":"IfNotPresent","repository":"busybox","tag":"stable"},"podAnnotations":{},"resources":{}}` | Job (one-off container) to run ahead of helm install / upgrade |
-| keda.cooldownPeriod | int | `300` |  |
-| keda.enabled | bool | `false` |  |
-| keda.initialCooldownPeriod | int | `0` |  |
-| keda.maxReplicaCount | int | `1` |  |
-| keda.minReplicaCount | int | `0` |  |
-| keda.pollingInterval | int | `30` |  |
-| keda.triggerAuthentication.name | string | `"azure-storage-auth"` |  |
-| keda.triggerAuthentication.parameters[0].secretTargetRef[0].key | string | `"connection-string"` |  |
-| keda.triggerAuthentication.parameters[0].secretTargetRef[0].name | string | `"azure-storage-secret"` |  |
-| keda.triggerAuthentication.parameters[0].secretTargetRef[0].parameter | string | `"connection"` |  |
-| keda.triggers[0].authenticationRef.name | string | `"azure-storage-auth"` |  |
-| keda.triggers[0].metadata.activationBlobCount | string | `"1"` |  |
-| keda.triggers[0].metadata.blobContainerName | string | `"yourcontainername"` |  |
-| keda.triggers[0].metadata.blobCount | string | `"5"` |  |
-| keda.triggers[0].type | string | `"azure-blob"` |  |
 | livenessProbe | object | `{}` | Configure a liveness probe for the pod |
 | networkpolicy.egress | object | `{}` |  |
 | networkpolicy.enabled | bool | `false` |  |
